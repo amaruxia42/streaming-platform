@@ -122,3 +122,26 @@ resource "aws_iam_role_policy" "github_ecr" {
 
   policy = data.aws_iam_policy_document.github_ecr.json
 }
+
+data "aws_iam_policy_document" "github_ecs" {
+
+  statement {
+    actions = [
+      "ecs:UpdateService",
+      "ecs:DescribeServices",
+      "ecs:DescribeTaskDefinition",
+      "ecs:RegisterTaskDefinition"
+    ]
+
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "github_ecs" {
+
+  name = "${var.project_name}-${var.environment}-github-ecs-policy"
+
+  role = aws_iam_role.github_actions.id
+
+  policy = data.aws_iam_policy_document.github_ecs.json
+}
