@@ -1,0 +1,12 @@
+{
+  "name": "video-api",
+  "version": "1.0.0",
+  "description": "Streaming platform MVP API",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
