@@ -8,9 +8,19 @@ Accepted
 
 ## Context
 The platform requires a Video Service responsible for four specific
-concerns: video metadata management, upload orchestration (pre-signed S3
-URL generation), transcoding job tracking, and playback URL preparation
-ahead of signed cookie issuance by the Playback Service.
+concerns:
+
+- Video metadata management
+- Upload orchestration (pre-signed S3 URL generation)
+- Transcoding job submission and tracking
+- Content asset discovery and retrieval
+
+Playback authorisation and CloudFront signed cookie issuance are handled
+by the Playback Service and are explicitly outside the responsibility
+of the Video Service.
+
+The Video Service owns content ingestion workflows while the Playback
+Service owns content access control and streaming authorisation.
 
 The service must:
 - Expose a REST API consumed by the frontend and other internal services
@@ -63,7 +73,7 @@ Python micro-framework with a large ecosystem and broad community adoption.
 - For an API with clearly defined request/response schemas and AWS SDK
   integration, Flask's minimalism becomes friction rather than flexibility
 
-### Node.js + Express
+### Node.js + Express / NestJS
 
 JavaScript runtime with a mature ecosystem for microservice APIs.
 
@@ -113,8 +123,9 @@ request validation, and strong typing support.
   and JSON schema generation in a single definition
 - Native async support (`async def`) handles concurrent S3 pre-signed URL
   generation and SQS job submission without blocking
-- Shares language runtime, base Docker image, boto3 dependency, and CI/CD
-  patterns with other Python services in the platform
+- Shares a common Python runtime, boto3 dependency model, container build
+  pattern, and CI/CD workflow approach with future Python-based services in
+  the platform.
 - Minimal boilerplate for a typed REST API — keeps development velocity
   high during MVP without sacrificing structure or documentation quality
 
@@ -127,10 +138,10 @@ The service exposes the following endpoints:
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/videos` | Accepts metadata, returns pre-signed S3 upload URL, submits SQS transcode job |
+| `POST` | `/videos` | Creates video metadata and returns a pre-signed S3 upload URL |
 | `GET` | `/videos` | Returns paginated content catalog |
 | `GET` | `/videos/{id}` | Returns single title metadata and asset URLs |
-| `GET` | `/videos/{id}/status` | Returns transcoding job status from the video metadata datastore |
+| `GET` | `/videos/{id}/status` | Returns video processing status and asset availability information |
 
 FastAPI is applied to the Video Service specifically. The **Playback
 Service** uses Go for performance-critical token issuance. This reflects a
