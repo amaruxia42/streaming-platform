@@ -88,7 +88,14 @@ module "github_actions" {
   project_name = var.project_name
   environment  = var.environment
 
-  github_repository        = var.github_repository
+  github_repository = var.github_repository
+}
+
+module "s3" {
+  source = "../../modules/s3"
+
+  project_name = var.project_name
+  environment  = var.environment
 }
 
 
