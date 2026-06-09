@@ -202,7 +202,7 @@ databases and cache services reside in isolated private data subnets.
 VPC endpoints are used for AWS service communication where appropriate,
 reducing NAT Gateway dependency and lowering AWS data processing costs.
 
-→ See `infra/terraform/modules/vpc/README.md`
+→ See `infra/terraform/modules/vpc/networking.md`
 
 ---
 
@@ -219,7 +219,7 @@ Security groups enforce least-privilege communication between:
 Security group references are used instead of CIDR-based rules wherever
 possible to support dynamic ECS task IP allocation.
 
-→ See `infra/terraform/modules/sec_grps/README.md`
+→ See `infra/terraform/modules/sec_grps/security_groups.md`
 
 ---
 
