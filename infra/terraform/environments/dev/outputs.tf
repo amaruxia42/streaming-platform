@@ -17,3 +17,15 @@ output "ecs_service_name" {
   description = "ecs service name"
   value       = module.ecs.ecs_service_name
 }
+
+output "ingest_bucket_name" {
+  value = module.s3.ingest_bucket_name
+}
+
+output "delivery_bucket_name" {
+  value = module.s3.delivery_bucket_name
+}
+
+output "assets_bucket_name" {
+  value = module.s3.assets_bucket_name
+}

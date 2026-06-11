@@ -98,6 +98,16 @@ module "s3" {
   environment  = var.environment
 }
 
+module "cloudfront" {
+  source = "../../modules/cloudfront"
+
+  environment  = var.environment
+  project_name = var.project_name
+
+  assets_bucket_name   = module.s3.assets_bucket_name
+  delivery_bucket_name = module.s3.delivery_bucket_name
+}
+
 
 
 
