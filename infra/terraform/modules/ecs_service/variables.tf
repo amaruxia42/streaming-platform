@@ -8,21 +8,6 @@ variable "environment" {
   type        = string
 }
 
-variable "aws_region" {
-  description = "AWS region"
-  type        = string
-}
-
-variable "execution_role_arn" {
-  description = "IAM execution role ARN"
-  type        = string
-}
-
-variable "task_role_arn" {
-  description = "ecs task role ARN"
-  type        = string
-}
-
 variable "app_subnet_ids" {
   description = "private subnets"
   type        = list(string)
@@ -43,24 +28,9 @@ variable "ecs_service_sg_id" {
   type        = string
 }
 
-variable "ecs_log_group_name" {
-  description = "CloudWatch ECS log group name"
-  type        = string
-}
-
 variable "container_name" {
   description = "Container image name"
   type        = string
-}
-
-variable "container_image" {
-  description = "container image version"
-  type        = string
-}
-
-variable "memory" {
-  type    = number
-  default = 512
 }
 
 variable "container_port" {
@@ -68,12 +38,20 @@ variable "container_port" {
   default = 80
 }
 
-variable "cpu" {
-  type    = number
-  default = 256
-}
-
 variable "desired_count" {
   type    = number
   default = 1
+}
+
+variable "health_check_grace_period_seconds" {
+  description = "ECS service health check grace period"
+
+  type = number
+
+  default = 120
+}
+
+variable "task_definition_arn" {
+  description = "Task definition ARN"
+  type        = string
 }
