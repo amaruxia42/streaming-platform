@@ -74,11 +74,11 @@ data "aws_iam_policy_document" "github_assume_role" {
     }
 
     condition {
-      test     = "StringLike"
+      test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
 
       values = [
-        "repo:${var.github_repository}:*"
+        "repo:${var.github_repository}:ref:refs/heads/main"
       ]
     }
   }
@@ -144,4 +144,208 @@ resource "aws_iam_role_policy" "github_ecs" {
   role = aws_iam_role.github_actions.id
 
   policy = data.aws_iam_policy_document.github_ecs.json
+}
+
+data "aws_iam_policy_document" "sns_to_sqs" {
+
+  statement {
+
+    effect = "Allow"
+
+    principals {
+      type = "Service"
+
+      identifiers = [
+        "sns.amazonaws.com"
+      ]
+    }
+
+    actions = [
+      "sqs:SendMessage"
+    ]
+
+    resources = [
+      var.video_processing_queue_arn
+    ]
+
+    condition {
+      test = "ArnEquals"
+
+      variable = "aws:SourceArn"
+
+      values = [
+        var.video_uploaded_topic_arn
+      ]
+    }
+  }
+}
+
+resource "aws_sqs_queue_policy" "video_processing" {
+
+  queue_url = var.video_processing_queue_url
+
+  policy = data.aws_iam_policy_document.sns_to_sqs.json
+}
+
+data "aws_iam_policy_document" "lambda_assume_role" {
+
+  statement {
+
+    effect = "Allow"
+
+    actions = [
+      "sts:AssumeRole"
+    ]
+
+    principals {
+      type = "Service"
+
+      identifiers = [
+        "lambda.amazonaws.com"
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role" "video_processor_lambda" {
+
+  name = "${var.project_name}-${var.environment}-video-processor-lambda-role"
+
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
+
+  role = aws_iam_role.video_processor_lambda.name
+
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+data "aws_iam_policy_document" "lambda_ecs_runtask" {
+
+  statement {
+
+    actions = [
+      "ecs:RunTask"
+    ]
+
+    resources = [
+      "*"
+    ]
+  }
+
+  statement {
+
+    actions = [
+      "iam:PassRole"
+    ]
+
+    resources = [
+      aws_iam_role.transcoder_task_execution_role.arn,
+      aws_iam_role.transcoder_task_role.arn
+    ]
+
+    condition {
+
+      test = "StringEquals"
+
+      variable = "iam:PassedToService"
+
+      values = [
+
+        "ecs-tasks.amazonaws.com"
+
+      ]
+
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "lambda_ecs_runtask" {
+
+  name = "${var.project_name}-${var.environment}-lambda-ecs-runtask"
+
+  role = aws_iam_role.video_processor_lambda.id
+
+  policy = data.aws_iam_policy_document.lambda_ecs_runtask.json
+}
+
+resource "aws_iam_role" "transcoder_task_execution_role" {
+
+  name = "${var.project_name}-${var.environment}-transcoder-task-execution-role"
+
+  assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role.json
+}
+
+data "aws_iam_policy_document" "transcoder_task_role" {
+
+  statement {
+
+    sid = "ReadFromIngestBucket"
+
+    actions = [
+      "s3:GetObject"
+    ]
+
+    resources = [
+      "${var.ingest_bucket_arn}/*"
+    ]
+  }
+
+  statement {
+
+    sid = "WriteToDeliveryBucket"
+
+    actions = [
+      "s3:PutObject"
+    ]
+
+    resources = [
+      "${var.delivery_bucket_arn}/*"
+    ]
+  }
+}
+
+data "aws_iam_policy_document" "ecs_task_assume_role" {
+
+  statement {
+
+    effect = "Allow"
+
+    actions = [
+      "sts:AssumeRole"
+    ]
+
+    principals {
+
+      type = "Service"
+
+      identifiers = [
+        "ecs-tasks.amazonaws.com"
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "transcoder_task_execution_policy" {
+
+  role = aws_iam_role.transcoder_task_execution_role.name
+
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_iam_role" "transcoder_task_role" {
+
+  name = "${var.project_name}-${var.environment}-transcoder-task-role"
+
+  assume_role_policy = data.aws_iam_policy_document.ecs_task_assume_role.json
+}
+
+resource "aws_iam_role_policy" "transcoder_s3" {
+
+  name = "${var.project_name}-${var.environment}-transcoder-s3-policy"
+
+  role = aws_iam_role.transcoder_task_role.id
+
+  policy = data.aws_iam_policy_document.transcoder_task_role.json
 }

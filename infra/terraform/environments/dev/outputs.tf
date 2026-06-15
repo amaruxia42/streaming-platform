@@ -10,12 +10,12 @@ output "repository_url" {
 
 output "ecs_cluster_name" {
   description = "ecs cluster name"
-  value       = module.ecs.ecs_cluster_name
+  value       = module.ecs_service.ecs_cluster_name
 }
 
 output "ecs_service_name" {
   description = "ecs service name"
-  value       = module.ecs.ecs_service_name
+  value       = module.ecs_service.ecs_service_name
 }
 
 output "ingest_bucket_name" {

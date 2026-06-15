@@ -1,9 +1,11 @@
 variable "project_name" {
-  type = string
+  description = "streaming platform name"
+  type        = string
 }
 
 variable "environment" {
-  type = string
+  description = "working environment"
+  type        = string
 }
 
 variable "aws_region" {
@@ -11,8 +13,8 @@ variable "aws_region" {
   type        = string
 }
 
-variable "container_image" {
-  description = "Container image"
+variable "log_group_name" {
+  description = "CloudWatch log name"
   type        = string
 }
 
@@ -26,17 +28,23 @@ variable "task_role_arn" {
   type        = string
 }
 
-variable "log_group_name" {
-  description = "CloudWatch log name"
+variable "container_image" {
+  description = "Container image"
   type        = string
+}
+
+variable "container_port" {
+  description = "Container port"
+  type        = number
+  default     = 80
 }
 
 variable "cpu" {
   type    = number
-  default = 4096
+  default = 256
 }
 
 variable "memory" {
   type    = number
-  default = 8192
+  default = 512
 }
