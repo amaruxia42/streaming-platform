@@ -13,10 +13,28 @@ FFmpeg transcoding pipeline. The architecture is designed to evolve toward
 an EKS-based platform once operational requirements justify the additional
 complexity.
 
-> **Status:** MVP — active development. Core infrastructure (VPC, Security
-> Groups, IAM, ECS, ECR, ALB, CloudWatch, GitHub OIDC, and CI/CD) complete.
-> Video pipeline, S3, CloudFront, Route53, RDS, and ElastiCache are currently
-> in development.
+> **Status:** MVP — active development. 
+> Foundation infrastructure is complete:
+
+* VPC
+* Security Groups
+* IAM
+* GitHub OIDC Federation
+* ECR
+* ECS
+* ALB
+* CloudWatch
+
+Video ingestion and delivery infrastructure is currently being implemented:
+
+* S3
+* SNS
+* SQS
+* Lambda
+* CloudFront
+* FFmpeg Transcoder Tasks
+
+Data services (PostgreSQL and Redis) remain outstanding.
 
 ---
 
@@ -55,10 +73,7 @@ Internet
 Application Load Balancer
     │
     ▼
-ECS Fargate Services
-    │
-    ▼
-RDS / Redis
+Video API (ECS Fargate)
 ```
 
 ### Video Delivery Path
@@ -96,41 +111,46 @@ S3 Delivery Bucket
                          └─────────┬───────────┘
                                    │
                                    ▼
-                    ┌─────────────────────────────┐
-                    │ Amazon ECS (Fargate)        │
-                    └──────────────┬──────────────┘
-                                   │
-                     ┌─────────────┴─────────────┐
-                     │                           │
-                     ▼                           ▼
 
-             Video Service                FFmpeg Worker
+                 ┌─────────────────────────────────┐
+                 │ ECS Fargate - Video API         │
+                 └───────────────┬─────────────────┘
+                                 │
+                                 ▼
 
-                     │                           ▲
-                     │                           │
-                     ▼                           │
+                        S3 Ingest Bucket
+                                 │
+                                 ▼
 
-              S3 Ingest Bucket                  │
-                     │                           │
-                     ▼                           │
+                            SNS Topic
+                                 │
+                                 ▼
 
-                    SNS                          │
-                     │                           │
-                     ▼                           │
+                            SQS Queue
+                                 │
+                                 ▼
 
-                    SQS ─────────────────────────┘
-                     │
-                     ▼
+                       Lambda Trigger
+                                 │
+                                 ▼
 
-              S3 Delivery Bucket
-                     │
-                     ▼
+                         ECS RunTask
+                                 │
+                                 ▼
 
-              CloudFront + WAF
-                     │
-                     ▼
+                 ECS Fargate - FFmpeg Transcoder
+                                 │
+                                 ▼
 
-                 Subscribers
+                       S3 Delivery Bucket
+                                 │
+                                 ▼
+
+                         CloudFront + WAF
+                                 │
+                                 ▼
+
+                            Subscribers
 ```
 
 ---
@@ -141,11 +161,11 @@ S3 Delivery Bucket
 |---------|---------|---------|
 | **Frontend** | React + Next.js, React Native | Web and mobile clients |
 | **CDN / Edge** | CloudFront, AWS WAF, AWS Shield | Global delivery and edge security |
-| **DNS / TLS** | Route53, ACM | DNS management and TLS certificates |
+| **TLS** | ACM | TLS certificates |
 | **API Routing** | Application Load Balancer | HTTPS termination and request routing |
 | **Compute** | ECS Fargate | Serverless container orchestration |
-| **Services** | FastAPI (current), Go (planned) | Video service, playback service, future microservices |
-| **Video Pipeline** | FFmpeg, ECS Fargate, SNS, SQS, S3, CloudFront | Video transcoding and content delivery |
+| **Services** | FastAPI, Go (planned) | Video service, playback service, future microservices |
+| **Video Pipeline** | FFmpeg, Lambda, SNS, SQS, ECS, S3, CloudFront | Event-driven transcoding pipeline |
 | **Database** | PostgreSQL (planned) | Metadata and transactional storage |
 | **Cache** | Redis (planned) | Sessions, caching, rate limiting |
 | **Object Storage** | Amazon S3 | Video ingest, delivery, and static assets |
@@ -163,11 +183,10 @@ S3 Delivery Bucket
 ```text
 streaming-platform/
 ├── docs/
-│   ├── architecture-decisions/
+│   ├── architecture_decisions/
 │   └── diagrams/
 │
 ├── frontend/
-│
 ├── mobile/
 │
 ├── services/
@@ -175,18 +194,44 @@ streaming-platform/
 │   ├── billing-service/
 │   ├── catalog-service/
 │   ├── playback-service/
-│   ├── transcoder-worker/
+│   ├── video-api/
 │   └── video-service/
 │
 ├── infra/
-│   ├── helm/
-│   ├── kubernetes/
 │   └── terraform/
+│       ├── bootstrap/
+│       │   └── github_oidc/
+│       │
 │       ├── environments/
+│       │   ├── dev/
+│       │   ├── staging/
+│       │   └── prod/
+│       │
 │       ├── modules/
+│       │   ├── alb/
+│       │   ├── cloudfront/
+│       │   ├── cloudwatch/
+│       │   ├── ecr/
+│       │   ├── ecs_service/
+│       │   ├── ecs_task_transcoder/
+│       │   ├── ecs_task_video_service/
+│       │   ├── eks/
+│       │   ├── iam/
+│       │   ├── lambda/
+│       │   ├── monitoring/
+│       │   ├── rds/
+│       │   ├── redis/
+│       │   ├── route53/
+│       │   ├── s3/
+│       │   ├── sec_grps/
+│       │   ├── sns/
+│       │   ├── sqs/
+│       │   └── vpc/
+│       │
 │       └── shared/
 │
-└── scripts/
+├── scripts/
+└── Makefile
 ```
 
 ---
@@ -225,41 +270,43 @@ possible to support dynamic ECS task IP allocation.
 
 ### Container Platform
 
-The MVP uses ECS Fargate for workload execution.
+#### Long-Running Services
 
-Current services:
+* Video API
+* Auth Service (future)
+* Catalog Service (future)
+* Billing Service (future)
+* Playback Service (future)
 
-- Video Service (FastAPI)
-- FFmpeg Transcoder Worker
+These services run continuously behind the Application Load Balancer.
 
-Future services:
+#### Event-Driven Tasks
 
-- Auth Service
-- Catalog Service
-- Billing Service
-- Playback Service
+* FFmpeg Transcoder
 
-Each service receives:
+Transcoding workloads are launched on demand using ecs:RunTask
+from a Lambda consumer that processes messages from the video
+processing SQS queue.
 
-- Dedicated ECR repository
-- ECS task definition
-- IAM execution role
-- CloudWatch log group
+This separation prevents compute-intensive transcoding jobs from
+competing with customer-facing APIs for resources.
 
 ---
 
 ### Video Pipeline
 
 Source video is uploaded directly to an S3 ingest bucket via a pre-signed
-multipart upload URL generated by the Video Service.
+multipart upload URL generated by the Video API.
 
 An S3 ObjectCreated event publishes to SNS, which fans out to an SQS
-transcoding queue. ECS Fargate FFmpeg workers consume jobs from the queue,
-generate an adaptive bitrate HLS ladder, and write output assets to the
-delivery bucket.
+processing queue. Lambda consumes queue messages and launches an ECS
+Fargate FFmpeg transcoder task. Generated HLS assets are written to the
+delivery bucket and distributed globally through CloudFront.
 
 CloudFront distributes content globally using Origin Access Control (OAC)
-and signed cookies for subscriber access control.
+to prevent direct access to S3 objects. Subscriber access is enforced using
+CloudFront signed cookies issued by the Playback Service after entitlement
+validation.
 
 ```text
 Client Upload
@@ -274,7 +321,13 @@ SNS Topic
 SQS Queue
       │
       ▼
-FFmpeg Worker (ECS Fargate)
+Lambda Trigger
+      │
+      ▼
+ECS RunTask
+      │
+      ▼
+FFmpeg Transcoder
       │
       ▼
 S3 Delivery Bucket
@@ -297,6 +350,12 @@ Git Push (main)
 GitHub Actions
       │
       ▼
+AWS STS (OIDC)
+      │
+      ▼
+Terraform Validate
+      │
+      ▼
 Docker Build
       │
       ▼
@@ -304,9 +363,6 @@ Push Image to ECR
       │
       ▼
 ECS Service Update
-      │
-      ▼
-Rolling Deployment
 ```
 
 Authentication to AWS uses GitHub OIDC federation.
@@ -382,6 +438,8 @@ ADRs document the major engineering decisions made throughout the project.
 | ADR-004 | Use S3 + CloudFront with signed cookies for content delivery | Accepted |
 | ADR-005 | Use FFmpeg on ECS Fargate for video transcoding | Accepted |
 | ADR-006 | Use FastAPI for the Video Service API layer | Accepted |
+| ADR-007 | SNS + SQS for event-driven video processing | Accepted |
+| ADR-008 | Defer Route53 until a custom domain exists | Accepted | 
 
 See:
 
@@ -406,14 +464,15 @@ Each Terraform module contains documentation covering:
 | VPC | Complete |
 | Security Groups | Complete |
 | IAM | Complete |
-| GitHub OIDC | Complete |
-| ECS | Complete |
+| GitHub OIDC Provider | Complete |
+| ECS Service | Complete |
+| ECS Task (Transcoder) | Complete |
 | ECR | Complete |
 | ALB | Complete |
 | CloudWatch | Complete |
-| S3 | In Progress |
-| CloudFront | In Progress |
-| Route53 | In Progress |
+| S3 | Complete |
+| CloudFront | Complete |
+| Route53 | Deferred (ADR-008) |
 | RDS | Planned |
 | Redis | Planned |
 | Monitoring | Planned |
@@ -438,13 +497,21 @@ systems evolve over time.
 - GitHub OIDC
 - CI/CD
 
-### Phase 2 — Video Platform 🚧
+### Phase 2A — Storage & Delivery Layer 🚧
 
-- S3 ingest pipeline
-- FFmpeg transcoding workers
-- SNS/SQS event architecture
-- CloudFront content delivery
-- Route53 integration
+- S3 
+- CloudFront
+- SNS
+- SQS
+- Lambda
+- FFmpeg ECS tasks
+
+### Phase 2B — Application Layer 🚧
+
+- Video API
+- Upload orchestration
+- Metadata management
+- Playback preparation
 
 ### Phase 3 — Data Services
 
@@ -484,7 +551,6 @@ systems evolve over time.
 - S3 ingest and delivery pipeline
 - FFmpeg-based transcoding
 - CloudFront CDN
-- Route53 integration
 - PostgreSQL metadata store
 - Redis cache
 
