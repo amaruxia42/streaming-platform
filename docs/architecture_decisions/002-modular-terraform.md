@@ -23,7 +23,7 @@ and environment-specific codebase that cannot be reused across dev and prod.
 - No clear ownership boundaries between infrastructure concerns
 
 **Terraform modules (one per service boundary)** ✅ Selected
-- Each module owns a single infrastructure concern
+- As the platform evolved, modules were further decomposed where a single module began to own multiple infrastructure responsibilities. The original ECS module was split into dedicated service and task modules (ecs_service, ecs_task_transcoder, and ecs_task_video_service) to preserve single-responsibility boundaries and support independent lifecycle management of long-running services and event-driven workloads. 
 - Modules are called from environment-specific roots (`environments/dev`,
   `environments/prod`) with environment-specific variable values
 - Changes to one module do not affect others unless explicitly called
@@ -42,7 +42,7 @@ modules/
 ├── ecr                  # Container registries per service
 ├── ecs_service          # ECS cluster + long-running ECS services
 ├── ecs_task_transcoder  # FFmpeg transcoder task definition
-├── ecs_task_video_api   # Video API task definition
+├── ecs_task_video_service   # Video API task definition
 ├── eks                  # Kubernetes cluster (scaffolded — future phase)
 ├── iam                  # IAM roles, policies, queue policies
 ├── lambda               # SQS consumer launching ECS RunTask workloads
