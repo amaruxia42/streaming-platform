@@ -36,21 +36,25 @@ outputs consumed by other modules, enforcing explicit dependency declaration.
 
 ```text
 modules/
-├── alb           # Application Load Balancer + listener rules
-├── cloudfront    # CDN distribution + origin access control
-├── cloudwatch    # Log groups + metric filters + alarms
-├── ecr           # Container registries per service
-├── ecs           # Cluster, task definitions, services
-├── eks           # Kubernetes cluster (scaffolded — future phase)
-├── github_oidc   # IAM OIDC provider + deployment role trust policy
-├── iam           # Service roles + policies
-├── monitoring    # Prometheus + Grafana (future phase)
-├── rds           # PostgreSQL instance + subnet group + parameter group
-├── redis         # ElastiCache cluster + subnet group
-├── route53       # Hosted zone + A/CNAME records
-├── s3            # Buckets for video ingest, delivery, and frontend assets
-├── sec_grps      # All security groups + ingress/egress rules
-└── vpc           # VPC, subnets, route tables, NAT gateway, VPC endpoints
+├── alb                  # Application Load Balancer + listener rules
+├── cloudfront           # CDN distribution + origin access control
+├── cloudwatch           # Log groups + metric filters + alarms
+├── ecr                  # Container registries per service
+├── ecs_service          # ECS cluster + long-running ECS services
+├── ecs_task_transcoder  # FFmpeg transcoder task definition
+├── ecs_task_video_api   # Video API task definition
+├── eks                  # Kubernetes cluster (scaffolded — future phase)
+├── iam                  # IAM roles, policies, queue policies
+├── lambda               # SQS consumer launching ECS RunTask workloads
+├── monitoring           # Prometheus + Grafana (future phase)
+├── rds                  # PostgreSQL instance + subnet group + parameter group
+├── redis                # ElastiCache cluster + subnet group
+├── route53              # Hosted zone + DNS records (deferred — ADR-008)
+├── s3                   # Ingest, delivery, and static asset buckets
+├── sec_grps             # Security groups + ingress/egress rules
+├── sns                  # Event publication layer
+├── sqs                  # Processing queues + dead letter queues
+└── vpc                  # VPC, subnets, route tables, NAT gateway, endpoints
 ```
 
 ## Consequences
