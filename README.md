@@ -25,7 +25,7 @@ complexity.
 * ALB
 * CloudWatch
 
-Video ingestion and delivery infrastructure is currently being implemented:
+Video ingestion and delivery infrastructure has been provisioned and is now being intergrated with the appliacation layer:
 
 * S3
 * SNS
@@ -49,7 +49,6 @@ Data services (PostgreSQL and Redis) remain outstanding.
 - [Architecture Decision Records](#architecture-decision-records)
 - [Module Documentation](#module-documentation)
 - [Architecture Evolution](#architecture-evolution)
-- [MVP Scope and Post-MVP Roadmap](#mvp-scope-and-post-mvp-roadmap)
 
 ---
 
@@ -164,7 +163,7 @@ S3 Delivery Bucket
 | **TLS** | ACM | TLS certificates |
 | **API Routing** | Application Load Balancer | HTTPS termination and request routing |
 | **Compute** | ECS Fargate | Serverless container orchestration |
-| **Services** | FastAPI, Go (planned) | Video service, playback service, future microservices |
+| **Services** | FastAPI (Video API), Go (future services) | Microservice application layer |
 | **Video Pipeline** | FFmpeg, Lambda, SNS, SQS, ECS, S3, CloudFront | Event-driven transcoding pipeline |
 | **Database** | PostgreSQL (planned) | Metadata and transactional storage |
 | **Cache** | Redis (planned) | Sessions, caching, rate limiting |
@@ -235,6 +234,11 @@ streaming-platform/
 ```
 
 ---
+
+> The service layer is currently being organised around independently
+> deployable microservices. ADR-006 defines the Video API as the primary
+> content management service for upload orchestration, metadata management,
+> transcoding job tracking, and content discovery.
 
 ## Infrastructure Overview
 
@@ -464,9 +468,9 @@ Each Terraform module contains documentation covering:
 | VPC | Complete |
 | Security Groups | Complete |
 | IAM | Complete |
-| GitHub OIDC Provider | Complete |
+| GitHub OIDC Bootstrap | Complete |
 | ECS Service | Complete |
-| ECS Task (Transcoder) | Complete |
+| ECS Task - Transcoder | Complete |
 | ECR | Complete |
 | ALB | Complete |
 | CloudWatch | Complete |
@@ -537,9 +541,9 @@ systems evolve over time.
 
 ---
 
-## MVP Scope and Post-MVP Roadmap
+## MVP Scope 
 
-### MVP Scope
+The completed MVP will include:
 
 - Three-tier AWS VPC
 - ECS Fargate
@@ -553,6 +557,47 @@ systems evolve over time.
 - CloudFront CDN
 - PostgreSQL metadata store
 - Redis cache
+
+## Remaining MVP Work
+
+The platform architecture and infrastructure foundation are established.
+The remaining work focuses on application implementation, data services,
+and operational hardening.
+
+### Data Services
+
+- PostgreSQL metadata store
+- Redis cache layer
+- Secrets Manager integration
+
+### Application Services
+
+- Video API implementation (ADR-006)
+- Playback Service
+- Auth Service
+- Catalog Service
+- Billing Service
+
+### Content Delivery
+
+- CloudFront signed cookie issuance
+- Subscriber entitlement validation
+- Playback authorisation workflow
+
+### CI/CD Enhancements
+
+- Trivy container image scanning
+- Automated unit testing
+- Integration testing
+- Deployment approval gates
+- Environment promotion workflows
+
+### Observability
+
+- OpenTelemetry instrumentation
+- Prometheus metrics collection
+- Grafana dashboards
+- Distributed tracing
 
 ### Post-MVP Enhancements
 
