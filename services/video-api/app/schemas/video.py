@@ -22,12 +22,12 @@ class VideoResponse(BaseModel):
 
     id: UUID
     title: str
-    description: str | None
+    description: str | None = None
     status: VideoStatus
 
 
 class VideoUploadResponse(BaseModel):
-    
+
     video_id: UUID
 
     upload_url: str
