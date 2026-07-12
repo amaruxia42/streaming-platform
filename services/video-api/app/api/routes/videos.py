@@ -14,6 +14,45 @@ from app.services.s3 import generate_upload_url
 router = APIRouter(prefix="/videos", tags=["Videos"])
 
 
+@router.get(
+    "/",
+    response_model=list[VideoResponse],
+)
+async def list_videos():
+    videos = metadata_service.list()
+
+    return [
+        VideoResponse(
+            id=video.id,
+            title=video.title,
+            description=video.description,
+            status=video.status,
+        )
+        for video in videos
+    ]
+
+@router.get(
+    "/{video_id}",
+    response_model=VideoResponse,
+)
+async def get_video(video_id: UUID):
+
+    video = metadata_service.get(video_id)
+
+    if video is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Video not found",
+        )
+
+    return VideoResponse(
+        id=video.id,
+        title=video.title,
+        description=video.description,
+        status=video.status,
+    )
+
+
 @router.post(
     "/",
     response_model=VideoUploadResponse,
@@ -43,27 +82,4 @@ async def create_video(request: VideoCreateRequest):
     return VideoUploadResponse(
         video_id=video_id,
         upload_url=upload_url,
-    )
-
-
-@router.get(
-    "/{video_id}",
-    response_model=VideoResponse,
-)
-
-async def get_video(video_id: UUID):
-
-    video = metadata_service.get(video_id)
-
-    if video is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Video not found",
-        )
-
-    return VideoResponse(
-        id=video.id,
-        title=video.title,
-        description=video.description,
-        status=video.status,
     )
