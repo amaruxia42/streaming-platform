@@ -2,6 +2,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException
 
+from app.core.logging import logger
 from app.models.video import Video, VideoStatus
 from app.schemas.video import (
     VideoCreateRequest,
@@ -101,12 +102,15 @@ async def create_video(request: VideoCreateRequest):
     )
 
     metadata_service.create(video)
+    logger.info("Created video %s", video.id)
 
     upload_url = generate_upload_url(
         video_id=video_id,
         filename=request.filename,
         content_type=request.content_type,
     )
+
+    logger.info("Generated upload URL for video %s", video.id)
 
     return VideoUploadResponse(
         video_id=video_id,
