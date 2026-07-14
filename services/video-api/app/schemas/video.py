@@ -37,3 +37,7 @@ class VideoStatusResponse(BaseModel):
     video_id: UUID
 
     status: VideoStatus
+
+
+class VideoStatusUpdateRequest(BaseModel):
+    status: VideoStatus

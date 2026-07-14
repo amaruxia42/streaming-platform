@@ -6,7 +6,9 @@ from app.models.video import Video, VideoStatus
 from app.schemas.video import (
     VideoCreateRequest,
     VideoResponse,
-    VideoUploadResponse
+    VideoStatusUpdateRequest,
+    VideoStatusResponse,
+    VideoUploadResponse,
 )
 from app.services.metadata import metadata_service
 from app.services.s3 import generate_upload_url
@@ -50,6 +52,33 @@ async def get_video(video_id: UUID):
         title=video.title,
         description=video.description,
         status=video.status,
+    )
+
+
+@router.patch(
+    "/{video_id}/status",
+    response_model=VideoStatusResponse,
+)
+async def update_video_status(
+        video_id: UUID,
+        request: VideoStatusUpdateRequest,
+):
+    video = metadata_service.get(video_id)
+
+    if video is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Video not found",
+        )
+
+    metadata_service.update_status(
+        video_id=video_id,
+        status=request.status,
+    )
+
+    return VideoStatusResponse(
+        video_id=video_id,
+        status=request.status,
     )
 
 
