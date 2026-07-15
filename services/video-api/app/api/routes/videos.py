@@ -2,6 +2,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException
 
+from app.core.exceptions import VideoNotFoundError
 from app.core.logging import logger
 from app.models.video import Video, VideoStatus
 from app.schemas.video import (
@@ -40,9 +41,15 @@ async def list_videos():
 )
 async def get_video(video_id: UUID):
 
-    video = metadata_service.get(video_id)
+    try:
+        video = metadata_service.get(video_id)
 
-    if video is None:
+    except VideoNotFoundError:
+        logger.warning(
+            "Video %s not found",
+            video_id,
+        )
+
         raise HTTPException(
             status_code=404,
             detail="Video not found",
@@ -64,22 +71,32 @@ async def update_video_status(
         video_id: UUID,
         request: VideoStatusUpdateRequest,
 ):
-    video = metadata_service.get(video_id)
+    try:
+      metadata_service.update_status(
+          video_id=video_id,
+          status=request.status,
+      )
 
-    if video is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Video not found",
-        )
+    except VideoNotFoundError:
+      logger.warning(
+          "Video %s not found",
+          video_id,
+      )
 
-    metadata_service.update_status(
-        video_id=video_id,
-        status=request.status,
+      raise HTTPException(
+      status_code=404,
+      detail="Video not found",
+      )
+
+    logger.info(
+      "Updated video %s status to %s",
+      video_id,
+      request.status,
     )
 
     return VideoStatusResponse(
-        video_id=video_id,
-        status=request.status,
+      video_id=video_id,
+      status=request.status,
     )
 
 
