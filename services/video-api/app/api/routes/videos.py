@@ -15,7 +15,10 @@ from app.schemas.video import (
 from app.services.metadata import metadata_service
 from app.services.s3 import generate_upload_url
 
-router = APIRouter(prefix="/videos", tags=["Videos"])
+router = APIRouter(
+    prefix="/videos",
+    tags=["Videos"],
+)
 
 
 @router.get(
@@ -49,9 +52,23 @@ async def list_videos():
         for video in videos
     ]
 
+
 @router.get(
     "/{video_id}",
+    summary="Get a video",
+    description=(
+        "Retrieves the metadata for a specific video using its unique "
+        "identifier."
+    ),
     response_model=VideoResponse,
+    responses={
+        200: {
+            "description": "Video metadata returned successfully.",
+        },
+        404: {
+            "description": "Video not found.",
+        },
+    },
 )
 async def get_video(video_id: UUID):
 
@@ -79,38 +96,49 @@ async def get_video(video_id: UUID):
 
 @router.patch(
     "/{video_id}/status",
+    summary="Update video status",
+    description=(
+        "Updates the processing status of a specific video."
+    ),
     response_model=VideoStatusResponse,
+    responses={
+        200: {
+            "description": "Video status updated successfully.",
+        },
+        404: {
+            "description": "Video not found.",
+        },
+    },
 )
 async def update_video_status(
-        video_id: UUID,
-        request: VideoStatusUpdateRequest,
+    video_id: UUID,
+    request: VideoStatusUpdateRequest,
 ):
     try:
-      metadata_service.update_status(
-          video_id=video_id,
-          status=request.status,
-      )
+        metadata_service.update_status(
+            video_id=video_id,
+            status=request.status,
+        )
 
     except VideoNotFoundError:
-      logger.warning(
-          "Video %s not found",
-          video_id,
-      )
-
-      raise HTTPException(
-      status_code=404,
-      detail="Video not found",
-      )
+        logger.warning(
+            "Video %s not found",
+            video_id,
+        )
+        raise HTTPException(
+            status_code=404,
+            detail="Video not found",
+        )
 
     logger.info(
-      "Updated video %s status to %s",
-      video_id,
-      request.status,
+        "Updated video %s status to %s",
+        video_id,
+        request.status,
     )
 
     return VideoStatusResponse(
-      video_id=video_id,
-      status=request.status,
+        video_id=video_id,
+        status=request.status,
     )
 
 
@@ -118,17 +146,17 @@ async def update_video_status(
     "/",
     summary="Create a new video",
     description=(
-        "Creates a new video metadata record and returns a pre-signed" 
-        "Amazon S3 upload URL that clients can use to upload the source"
+        "Creates a new video metadata record and returns a pre-signed "
+        "Amazon S3 upload URL that clients can use to upload the source "
         "video directly into the ingest bucket."
     ),
     response_model=VideoUploadResponse,
     status_code=201,
     responses={
-            201: {
-                "description": "Video created successfully.",
-            },
+        201: {
+            "description": "Video created successfully.",
         },
+    },
 )
 async def create_video(request: VideoCreateRequest):
 
