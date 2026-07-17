@@ -20,10 +20,24 @@ router = APIRouter(prefix="/videos", tags=["Videos"])
 
 @router.get(
     "/",
+    summary="List videos",
+    description=(
+        "Returns all video metadata currently stored by the Video API."
+    ),
     response_model=list[VideoResponse],
+    responses={
+        200: {
+            "description": "Video list returned successfully.",
+        },
+    },
 )
 async def list_videos():
     videos = metadata_service.list()
+
+    logger.info(
+        "Retrieved %d videos",
+        len(videos),
+    )
 
     return [
         VideoResponse(
@@ -102,8 +116,19 @@ async def update_video_status(
 
 @router.post(
     "/",
+    summary="Create a new video",
+    description=(
+        "Creates a new video metadata record and returns a pre-signed" 
+        "Amazon S3 upload URL that clients can use to upload the source"
+        "video directly into the ingest bucket."
+    ),
     response_model=VideoUploadResponse,
     status_code=201,
+    responses={
+            201: {
+                "description": "Video created successfully.",
+            },
+        },
 )
 async def create_video(request: VideoCreateRequest):
 
