@@ -1,5 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from app.core.logging import logger
 
+from app.core.exceptions import VideoNotFoundError
 from app.api.router import api_router
 
 tags_metadata = [
@@ -29,6 +32,25 @@ app = FastAPI(
     },
     openapi_tags=tags_metadata,
 )
+
+
+@app.exception_handler(VideoNotFoundError)
+async def video_not_found_exception_handler(
+    request: Request,
+    exc: VideoNotFoundError,
+) -> JSONResponse:
+    logger.warning(
+        "Video %s not found during %s %s",
+        exc.video_id,
+        request.method,
+        request.url.path,
+    )
+    return JSONResponse(
+        status_code=404,
+        content={
+            "detail": "Video not found",
+        },
+    )
 
 app.include_router(api_router)
 
