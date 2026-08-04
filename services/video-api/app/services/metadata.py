@@ -20,20 +20,22 @@ class MetadataService:
 
         return video
 
-
     def list(self) -> list[Video]:
         return list(self.videos.values())
 
+    def clear(self) -> None:    
+        """Remove all stored videos.
+        Primarily used to reset the in-memory store between tests
+        """
+        self.videos.clear()
 
     def update_status(
-            self,
-            video_id: UUID,
-            status: VideoStatus
+        self,
+        video_id: UUID,
+        status: VideoStatus
     ) -> None:
 
-        video = self.videos.get(video_id)
+        video = self.get(video_id)
         video.status = status
-        
-
 
 metadata_service = MetadataService()
