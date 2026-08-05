@@ -107,3 +107,67 @@ def test_get_video_not_found(client):
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Video not found"}
+
+
+@patch("app.api.routes.videos.generate_upload_url")
+def test_video_status_update(mock_generate_upload_url, client):
+    mock_generate_upload_url.return_value = "https://example.com/upload"
+
+    payload = {
+            "title": "My test video",
+            "description": "Testing Video Retrieval",
+            "filename": "demo.mp4",
+            "content_type": "video/mp4",
+        }
+
+    create_response = client.post(
+            "/videos/", 
+            json=payload,
+            )
+        
+    assert create_response.status_code == 201
+
+    body = create_response.json()
+    video_id = body["video_id"]
+    
+    status_payload = {
+        "status": "READY",
+    }
+    
+    patch_response = client.patch(
+        f"/videos/{video_id}/status",
+        json=status_payload,
+        )
+    
+    assert patch_response.status_code == 200
+    assert patch_response.json()["status"] == "READY"
+
+    get_response = client.get(f"/videos/{video_id}")
+
+    assert get_response.status_code == 200
+
+    body = get_response.json()
+
+    assert body["id"] == video_id
+    assert body["title"] == payload["title"]
+    assert body["description"] == payload["description"]
+    assert body["status"] == "READY"
+
+
+def test_video_status_not_found(client):
+    video_id = uuid4()
+
+    status_payload = {
+            "status": "READY",
+        }
+
+    response = client.patch(
+        f"/videos/{video_id}/status",
+        json=status_payload,
+        )
+    
+    assert response.status_code == 404
+    assert response.json() == {
+    "detail": "Video not found",
+}
+    
