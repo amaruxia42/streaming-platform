@@ -1,5 +1,9 @@
 fastapi
 uvicorn[standard]
 pydantic
+pydantic-settings
 python-dotenv
 boto3
+
+sqlalchemy>=2.0
+psycopg[binary]>=3.2

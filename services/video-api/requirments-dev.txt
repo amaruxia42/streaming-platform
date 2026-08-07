@@ -1,9 +1,0 @@
--r requirements.txt
-
-pytest
-pytest-asyncio
-httpx
-black
-ruff
-mypy
-
