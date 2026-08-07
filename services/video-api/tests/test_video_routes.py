@@ -114,10 +114,10 @@ def test_video_status_update(mock_generate_upload_url, client):
     mock_generate_upload_url.return_value = "https://example.com/upload"
 
     payload = {
-            "title": "My test video",
-            "description": "Testing Video Retrieval",
-            "filename": "demo.mp4",
-            "content_type": "video/mp4",
+        "title": "My test video",
+        "description": "Testing Video Retrieval",
+        "filename": "demo.mp4",
+        "content_type": "video/mp4",
         }
 
     create_response = client.post(
@@ -147,7 +147,7 @@ def test_video_status_update(mock_generate_upload_url, client):
     assert get_response.status_code == 200
 
     body = get_response.json()
-
+    print(body)
     assert body["id"] == video_id
     assert body["title"] == payload["title"]
     assert body["description"] == payload["description"]
@@ -158,8 +158,8 @@ def test_video_status_not_found(client):
     video_id = uuid4()
 
     status_payload = {
-            "status": "READY",
-        }
+        "status": "READY",
+    }
 
     response = client.patch(
         f"/videos/{video_id}/status",
@@ -170,4 +170,132 @@ def test_video_status_not_found(client):
     assert response.json() == {
     "detail": "Video not found",
 }
+
+
+def test_missing_title_video(client):
+     
+    payload = {
+        "description": "Testing missing title",
+        "filename": "demo.mp4",
+        "content_type": "video/mp4",
+    }
     
+    response = client.post(
+                "/videos/", 
+                json=payload,
+                )
+    
+    assert response.status_code == 422
+
+    errors = response.json()["detail"]
+        
+    assert any(
+        err["loc"] == ["body", "title"]
+        for err in errors
+    )
+
+
+def test_empty_title_video(client):  
+    
+    payload = {
+        "title": "",
+        "description": "Testing empty title",
+        "filename": "demo.mp4",
+        "content_type": "video/mp4",
+    }
+
+    response = client.post(
+        "/videos/",
+        json=payload,
+    )
+
+    assert response.status_code == 422 
+
+    errors = response.json()["detail"]
+        
+    assert any(
+        err["loc"] == ["body", "title"]
+        for err in errors
+    ) 
+
+
+def test_title_exceeds_max_length(client):
+   
+    payload = {
+        "title": "A" * 201,
+        "description": "Testing if title exceeds maximum length",
+        "filename": "demo.mp4",
+        "content_type": "video/mp4",
+    }
+
+    response = client.post(
+        "/videos/",
+        json=payload,
+    )
+
+    assert response.status_code == 422
+
+    errors = response.json()["detail"]
+    
+    assert any(
+        err["loc"] == ["body", "title"]
+        for err in errors
+    )
+
+
+@patch("app.api.routes.videos.generate_upload_url")
+def test_invalid_status(mock_generate_upload_url, client):
+
+    mock_generate_upload_url.return_value = "https://example.com/upload"
+
+    payload = {
+        "title": "My test video",
+        "description": "Testing Invalid Status",
+        "filename": "demo.mp4",
+        "content_type": "video/mp4",
+        }
+
+    create_response = client.post(
+            "/videos/",
+            json=payload,
+            )
+        
+    assert create_response.status_code == 201
+
+    create_body = create_response.json()
+
+    video_id = create_body["video_id"]
+
+    status_payload = {
+        "status": "COMPLETE",
+    }
+
+    response = client.patch(
+        f"/videos/{video_id}/status",
+        json=status_payload,
+    )
+
+    assert response.status_code == 422
+
+    errors = response.json()["detail"]
+
+    assert any(
+        err["loc"] == ["body", "status"]
+        for err in errors
+    )
+
+
+def test_invalid_uuid(client):
+
+    response = client.get(
+            "/videos/not-a-uuid",
+        )
+    
+    assert response.status_code == 422
+
+    errors = response.json()["detail"]
+
+    assert any(
+        err["loc"] == ["path", "video_id"]
+        for err in errors
+    )
