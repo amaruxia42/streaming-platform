@@ -1,19 +1,24 @@
 from uuid import UUID
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from app.models.video import Video, VideoStatus
 from app.core.exceptions import VideoNotFoundError
 
 
 class MetadataService:
 
-    def __init__(self):
-        self.videos: dict[UUID, Video] = {}
+    def __init__(self, db: Session):
+        self.db = db
 
     def create(self, video: Video) -> None:
-        self.videos[video.id] = video
+        self.db.add(video)
+        self.db.commit()
+        self.db.refresh(video)
 
     def get(self, video_id: UUID) -> Video:
-        video = self.videos.get(video_id)
+        video = self.db.get(Video, video_id)
 
         if video is None:
             raise VideoNotFoundError(video_id)
@@ -21,13 +26,9 @@ class MetadataService:
         return video
 
     def list(self) -> list[Video]:
-        return list(self.videos.values())
+        statement = select(Video)
+        return list(self.db.scalars(statement).all())
 
-    def clear(self) -> None:    
-        """Remove all stored videos.
-        Primarily used to reset the in-memory store between tests
-        """
-        self.videos.clear()
 
     def update_status(
         self,
@@ -37,5 +38,6 @@ class MetadataService:
 
         video = self.get(video_id)
         video.status = status
+        self.db.commit()
+        self.db.refresh(video)
 
-metadata_service = MetadataService()
