@@ -1,6 +1,7 @@
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 from app.core.logging import logger
 from app.models.video import Video, VideoStatus
@@ -11,7 +12,8 @@ from app.schemas.video import (
     VideoStatusResponse,
     VideoUploadResponse,
 )
-from app.services.metadata import metadata_service
+from app.db.dependancies import get_db
+from app.services.metadata import MetadataService
 from app.services.s3 import generate_upload_url
 
 router = APIRouter(
@@ -33,8 +35,11 @@ router = APIRouter(
         },
     },
 )
-async def list_videos():
-    videos = metadata_service.list()
+async def list_videos(
+    db: Session = Depends(get_db),
+):
+    service = MetadataService(db)
+    videos = service.list()
 
     logger.info(
         "Retrieved %d videos",
@@ -69,8 +74,12 @@ async def list_videos():
         },
     },
 )
-async def get_video(video_id: UUID):
-    video = metadata_service.get(video_id)
+async def get_video(
+    video_id: UUID,
+    db: Session = Depends(get_db),
+):
+    service = MetadataService(db)
+    video = service.get(video_id)
 
     return VideoResponse(
         id=video.id,
@@ -99,9 +108,10 @@ async def get_video(video_id: UUID):
 async def update_video_status(
     video_id: UUID,
     request: VideoStatusUpdateRequest,
+    db: Session = Depends(get_db),
 ):
-    
-    metadata_service.update_status(
+    service = MetadataService(db)
+    service.update_status(
         video_id=video_id,
         status=request.status,
     )
@@ -134,8 +144,11 @@ async def update_video_status(
         },
     },
 )
-async def create_video(request: VideoCreateRequest):
-
+async def create_video(
+    request: VideoCreateRequest,
+    db:Session = Depends(get_db),
+):
+    service = MetadataService(db)
     video_id = uuid4()
 
     video = Video(
@@ -147,7 +160,7 @@ async def create_video(request: VideoCreateRequest):
         status=VideoStatus.UPLOAD_PENDING,
     )
 
-    metadata_service.create(video)
+    service.create(video)
     logger.info("Created video %s", video.id)
 
     upload_url = generate_upload_url(

@@ -1,5 +1,4 @@
 from unittest.mock import patch
-from app.services.metadata import metadata_service
 from uuid import uuid4
 
 
@@ -31,7 +30,6 @@ def test_create_video(mock_generate_upload_url, client):
 
     mock_generate_upload_url.assert_called_once()
 
-    assert len(metadata_service.list()) == 1
 
     
 @patch("app.api.routes.videos.generate_upload_url")
