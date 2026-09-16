@@ -297,3 +297,99 @@ def test_invalid_uuid(client):
         err["loc"] == ["path", "video_id"]
         for err in errors
     )
+
+
+def test_description_exceeds_max_length(client):
+
+    payload = {
+        "title": "My test video",
+        "description": "A" * 2001,
+        "filename": "demo.mp4",
+        "content_type": "video/mp4",
+    }
+
+    response = client.post(
+        "/videos/",
+        json=payload,
+    )
+
+    assert response.status_code == 422
+
+    errors = response.json()["detail"]
+
+    assert any(
+        err["loc"] == ["body", "description"]
+        for err in errors
+    )
+
+
+def test_empty_filename(client):
+
+    payload = {
+        "title": "My test video",
+        "description": "Testing an empty filename",
+        "filename": "",
+        "content_type": "video/mp4",
+    }
+
+    response = client.post(
+        "/videos/",
+        json=payload,
+    )
+
+    assert response.status_code == 422
+
+    errors = response.json()["detail"]
+
+    assert any(
+        err["loc"] == ["body", "filename"]
+        for err in errors
+    )
+
+
+def test_filename_exceeds_max_length(client):
+
+    payload = {
+        "title": "My test video",
+        "description": "Testing filename length",
+        "filename": "A" * 256,
+        "content_type": "video/mp4",
+    }
+
+    response = client.post(
+        "/videos/",
+        json=payload,
+    )
+
+    assert response.status_code == 422
+
+    errors = response.json()["detail"]
+
+    assert any(
+        err["loc"] == ["body", "filename"]
+        for err in errors
+    )
+
+
+def test_empty_content_type(client):
+
+    payload = {
+        "title": "My test video",
+        "description": "Testing empty content type",
+        "filename": "demo.mp4",
+        "content_type": "",
+    }
+
+    response = client.post(
+        "/videos/",
+        json=payload,
+    )
+
+    assert response.status_code == 422
+
+    errors = response.json()["detail"]
+
+    assert any(
+        err["loc"] == ["body", "content_type"]
+        for err in errors
+    )

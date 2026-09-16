@@ -11,11 +11,20 @@ class VideoCreateRequest(BaseModel):
         max_length=200,
     )
 
-    description: str | None = None
+    description: str | None = Field(
+        default=None,
+        max_length=2000,
+    )
 
-    filename: str
+    filename: str = Field(
+        min_length=1,
+        max_length=255,
+    )
 
-    content_type: str
+    content_type: str = Field(
+        min_length=1,
+        max_length=100,
+    )
 
 
 class VideoResponse(BaseModel):
