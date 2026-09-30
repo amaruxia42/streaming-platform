@@ -11,7 +11,7 @@ def test_create_video(mock_generate_upload_url, client):
         "filename": "demo.mp4",
         "content_type": "video/mp4",
     }
-
+    
     mock_generate_upload_url.return_value = (
         "https://example.com/upload"
     )
