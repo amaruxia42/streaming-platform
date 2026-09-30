@@ -54,7 +54,7 @@ Data services (PostgreSQL and Redis) remain outstanding.
 
 ## Architecture Overview
 
-![VOD Streaming Platform — Network Architecture](docs/vpc-network-architecture.png)
+![VOD Streaming Platform — Network Architecture](docs/diagrams/network.png)
 
 The platform uses a three-tier AWS VPC spanning three Availability Zones.
 Application workloads are isolated within private subnets while databases
